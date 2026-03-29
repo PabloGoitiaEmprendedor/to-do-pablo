@@ -342,8 +342,50 @@ export function TimelineView({ date, label }: TimelineViewProps) {
     return -1;
   }, [blocks, currentMinutes, isToday]);
 
+  const timeProgress = useMemo(() => {
+    if (!isToday || blocks.length === 0) return 0;
+    const firstBlock = blocks[0];
+    const lastBlock = blocks[blocks.length - 1];
+    const [firstH, firstM] = firstBlock.start_time.split(':').map(Number);
+    const [lastH, lastM] = lastBlock.end_time.split(':').map(Number);
+    const totalMin = (lastH * 60 + lastM) - (firstH * 60 + firstM);
+    if (totalMin <= 0) return 0;
+    const elapsed = currentMinutes - (firstH * 60 + firstM);
+    return Math.max(0, Math.min(100, (elapsed / totalMin) * 100));
+  }, [isToday, blocks, currentMinutes]);
+
   return (
     <div className="flex flex-col h-full">
+      {/* Time Progress Bar */}
+      {isToday && blocks.length > 0 && (
+        <div className="px-4 py-3 bg-card/50 border-b border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              {format(currentTime, 'HH:mm')}
+            </span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Progreso del día
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-secondary overflow-hidden relative">
+            <div 
+              className="h-full rounded-full transition-all duration-1000"
+              style={{ 
+                width: `${timeProgress}%`,
+                background: blocks[currentBlockIndex]?.color || '#888'
+              }}
+            />
+            <div 
+              className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-background shadow-md animate-pulse"
+              style={{ 
+                left: `calc(${timeProgress}% - 5px)`,
+                backgroundColor: blocks[currentBlockIndex]?.color || '#888'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Completion celebration */}
       <AnimatePresence>
         {completedTaskId && (
@@ -380,19 +422,13 @@ export function TimelineView({ date, label }: TimelineViewProps) {
             const blockColor = block.color || '#888888';
 
             return (
-              <div key={block.id} className="relative">
+              <div key={block.id} className="relative pl-7">
                 {isCurrent && (
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <div 
-                        className="absolute -left-2 top-0 bottom-0 w-[4px] rounded-full"
-                        style={{ backgroundColor: blockColor }}
-                      />
-                      <div 
-                        className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background z-20"
-                        style={{ backgroundColor: blockColor }}
-                      />
-                    </div>
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 rounded-full overflow-hidden shadow-lg shadow-primary/30">
+                    <div 
+                      className="absolute inset-0 animate-pulse"
+                      style={{ backgroundColor: blockColor, boxShadow: `0 0 12px 2px ${blockColor}` }}
+                    />
                   </div>
                 )}
                 <BlockCard

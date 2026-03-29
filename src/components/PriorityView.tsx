@@ -4,18 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useThemeStore } from '@/store/themeStore';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { useState } from 'react';
 
 interface PriorityViewProps {
   priority: '20' | '70' | '10' | 'optional';
+  recurring?: boolean;
 }
-
-const PRIORITY_COLORS: Record<string, string> = {
-  '20': 'bg-red-500',
-  '70': 'bg-yellow-500',
-  '10': 'bg-blue-500',
-  'optional': 'bg-gray-400',
-};
 
 const DEFAULT_LABELS: Record<string, string> = {
   '20': 'Task 20%',
@@ -24,17 +17,17 @@ const DEFAULT_LABELS: Record<string, string> = {
   optional: 'Opcionales',
 };
 
-export function PriorityView({ priority }: PriorityViewProps) {
+export function PriorityView({ priority, recurring = false }: PriorityViewProps) {
   const { tasks, loading, refetch } = useAllTasks();
   const { blocks } = useTimeBlocks();
-  const { priorityNames } = useThemeStore();
 
   const blockName = blocks.find(b => b.priority === priority)?.name || DEFAULT_LABELS[priority];
   const blockColor = blocks.find(b => b.priority === priority)?.color || '#888';
 
   const filtered = tasks.filter((t) => t.priority === priority);
-  const nonRecurring = filtered.filter(t => t.recurrence_kind === 'none');
-  const recurring = filtered.filter(t => t.recurrence_kind !== 'none');
+  const displayTasks = recurring 
+    ? filtered.filter(t => t.recurrence_kind !== 'none')
+    : filtered.filter(t => t.recurrence_kind === 'none');
 
   const handleComplete = async (id: string) => {
     await supabase.from('tasks').update({ status: 'completed' }).eq('id', id);
@@ -46,10 +39,10 @@ export function PriorityView({ priority }: PriorityViewProps) {
     refetch();
   };
 
-  const pending = filtered.filter(t => t.status === 'pending');
-  const completed = filtered.filter(t => t.status === 'completed');
+  const pending = displayTasks.filter(t => t.status === 'pending');
+  const completed = displayTasks.filter(t => t.status === 'completed');
 
-  const renderTask = (task: typeof filtered[0], showDate = true) => (
+  const renderTask = (task: typeof displayTasks[0], showDate = true) => (
     <div 
       key={task.id} 
       className={`group flex items-center gap-3 px-4 py-3 rounded-2xl border border-border/50 bg-card/50 hover:bg-card hover:border-primary/20 transition-all ${
@@ -125,7 +118,12 @@ export function PriorityView({ priority }: PriorityViewProps) {
             style={{ backgroundColor: blockColor }}
           />
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{blockName}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+              {blockName}
+              {recurring && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">(Recurrente)</span>
+              )}
+            </h1>
             <span className="text-xs text-muted-foreground">
               {pending.length} pendientes · {completed.length} completadas
             </span>
@@ -140,7 +138,7 @@ export function PriorityView({ priority }: PriorityViewProps) {
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {!loading && displayTasks.length === 0 && (
           <div className="text-center py-16">
             <div className={`w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center bg-muted`}>
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: blockColor }} />
@@ -149,7 +147,7 @@ export function PriorityView({ priority }: PriorityViewProps) {
           </div>
         )}
 
-        {!loading && nonRecurring.length > 0 && (
+        {!loading && pending.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -158,34 +156,21 @@ export function PriorityView({ priority }: PriorityViewProps) {
               <div className="h-px bg-border flex-1" />
             </div>
             <div className="space-y-2">
-              {nonRecurring.filter(t => t.status === 'pending').map(task => renderTask(task))}
+              {pending.map(task => renderTask(task))}
             </div>
-            
-            {completed.length > 0 && (
-              <div className="space-y-2 mt-4">
-                <div className="flex items-center gap-2 px-1">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Completadas
-                  </h2>
-                  <div className="h-px bg-border flex-1" />
-                </div>
-                {completed.map(task => renderTask(task))}
-              </div>
-            )}
           </div>
         )}
 
-        {!loading && recurring.length > 0 && (
+        {!loading && completed.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1 pt-4 border-t border-border/50">
-              <RotateCcw className="w-3.5 h-3.5 text-primary" />
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Recurrentes
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Completadas
               </h2>
               <div className="h-px bg-border flex-1" />
             </div>
             <div className="space-y-2">
-              {recurring.map(task => renderTask(task))}
+              {completed.map(task => renderTask(task))}
             </div>
           </div>
         )}

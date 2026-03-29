@@ -12,31 +12,9 @@ import {
   FolderOpen,
   LayoutGrid,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CreateTaskModal } from './CreateTaskModal';
 import { useTimeBlocks } from '@/hooks/useSupabaseTasks';
-
-interface NavItem {
-  id: SidebarPage;
-  label: string;
-  icon: React.ElementType;
-  section?: string;
-  priority?: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { id: 'today', label: 'Hoy', icon: Sun, section: 'Agenda' },
-  { id: 'planning', label: 'Planificación', icon: CalendarDays },
-  { id: 'routines', label: 'Rutinas', icon: RotateCcw },
-  { id: 'priority-20', label: 'Task 20%', icon: LayoutGrid, section: 'Prioridades', priority: '20' },
-  { id: 'priority-70', label: 'Task 70%', icon: LayoutGrid, priority: '70' },
-  { id: 'priority-10', label: 'Task 10%', icon: LayoutGrid, priority: '10' },
-  { id: 'priority-optional', label: 'Opcionales', icon: CircleDot },
-  { id: 'categories', label: 'Categorías', icon: FolderOpen, section: 'Organización' },
-  { id: 'metrics', label: 'Métricas', icon: BarChart3, section: 'Análisis' },
-  { id: 'habits', label: 'Hábitos', icon: LayoutGrid },
-  { id: 'eisenhower', label: 'Matriz Eisenhower', icon: Target },
-];
 
 const DEFAULT_COLORS: Record<string, string> = {
   '20': '#EF4444',
@@ -61,6 +39,8 @@ export function AppSidebar() {
     const block = blocks.find(b => b.priority === priority);
     return block?.color || DEFAULT_COLORS[priority] || '#888888';
   };
+
+  const priorityBlocks = ['20', '70', '10', 'optional'] as const;
 
   return (
     <>
@@ -92,41 +72,53 @@ export function AppSidebar() {
               </button>
             </div>
 
-            <nav className="flex-1 py-2 px-2 overflow-y-auto">
-              {NAV_ITEMS.map((item) => {
-                const isActive = activePage === item.id;
-                const blockName = item.priority ? (getBlockName(item.priority) || item.label) : item.label;
-                const blockColor = item.priority ? getBlockColor(item.priority) : null;
-                let lastSection = '';
-                
-                return (
-                  <div key={item.id}>
-                    {item.section && (
-                      <span className="text-[9px] text-sidebar-foreground/40 uppercase tracking-wider font-semibold px-3 pt-4 pb-1.5 block">
-                        {item.section}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => { setActivePage(item.id); setSidebarOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all mb-0.5 ${
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
-                      }`}
-                    >
-                      {blockColor ? (
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: blockColor }}
-                        />
-                      ) : (
-                        <item.icon className="w-4 h-4 shrink-0" />
-                      )}
-                      <span className="truncate">{blockName}</span>
-                    </button>
-                  </div>
-                );
-              })}
+            <nav className="flex-1 py-2 px-2 overflow-y-auto space-y-1">
+              {/* Agenda */}
+              <span className="text-[9px] text-sidebar-foreground/40 uppercase tracking-wider font-semibold px-3 pt-4 pb-1.5 block">Agenda</span>
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="today" label="Hoy" icon={Sun} />
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="planning" label="Planificación" icon={CalendarDays} />
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="routines" label="Rutinas" icon={RotateCcw} />
+
+              {/* Prioridades */}
+              <span className="text-[9px] text-sidebar-foreground/40 uppercase tracking-wider font-semibold px-3 pt-5 pb-1.5 block">Prioridades</span>
+              {priorityBlocks.map((p) => (
+                <SidebarButton 
+                  key={p} 
+                  activePage={activePage} 
+                  setActivePage={setActivePage} 
+                  setSidebarOpen={setSidebarOpen} 
+                  id={`priority-${p}` as SidebarPage} 
+                  label={getBlockName(p) || (p === 'optional' ? 'Opcionales' : `Task ${p}%`)} 
+                  icon={CircleDot}
+                  color={getBlockColor(p)} 
+                />
+              ))}
+
+              {/* Recurrentes */}
+              <span className="text-[9px] text-sidebar-foreground/30 uppercase tracking-wider font-semibold px-3 pt-4 pb-1.5 block">Recurrentes</span>
+              {priorityBlocks.filter(p => p !== 'optional').map((p) => (
+                <SidebarButton 
+                  key={`recurring-${p}`} 
+                  activePage={activePage} 
+                  setActivePage={setActivePage} 
+                  setSidebarOpen={setSidebarOpen} 
+                  id={`recurring-${p}` as SidebarPage} 
+                  label={getBlockName(p) || `Task ${p}%`} 
+                  icon={RotateCcw}
+                  color={getBlockColor(p)} 
+                  nested
+                />
+              ))}
+
+              {/* Organización */}
+              <span className="text-[9px] text-sidebar-foreground/40 uppercase tracking-wider font-semibold px-3 pt-5 pb-1.5 block">Organización</span>
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="categories" label="Categorías" icon={FolderOpen} />
+
+              {/* Análisis */}
+              <span className="text-[9px] text-sidebar-foreground/40 uppercase tracking-wider font-semibold px-3 pt-5 pb-1.5 block">Análisis</span>
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="metrics" label="Métricas" icon={BarChart3} />
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="habits" label="Hábitos" icon={LayoutGrid} />
+              <SidebarButton activePage={activePage} setActivePage={setActivePage} setSidebarOpen={setSidebarOpen} id="eisenhower" label="Matriz Eisenhower" icon={Target} />
             </nav>
 
             <div className="p-3 border-t border-sidebar-border">
@@ -143,5 +135,39 @@ export function AppSidebar() {
 
       <CreateTaskModal open={showCreate} onClose={() => setShowCreate(false)} defaultDate={getTodayDate()} />
     </>
+  );
+}
+
+function SidebarButton({ 
+  activePage, setActivePage, setSidebarOpen, id, label, icon: Icon, color, nested 
+}: { 
+  activePage: SidebarPage; 
+  setActivePage: (id: SidebarPage) => void; 
+  setSidebarOpen: (open: boolean) => void;
+  id: SidebarPage; 
+  label: string; 
+  icon: React.ElementType; 
+  color?: string;
+  nested?: boolean;
+}) {
+  const isActive = activePage === id;
+  return (
+    <button
+      onClick={() => { setActivePage(id); setSidebarOpen(false); }}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${
+        nested ? 'pl-8' : ''
+      } ${
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+      }`}
+    >
+      {color ? (
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      ) : (
+        <Icon className="w-4 h-4 shrink-0" />
+      )}
+      <span className="truncate">{label}</span>
+    </button>
   );
 }

@@ -54,6 +54,12 @@ const Index = () => {
         return <PriorityView priority="10" />;
       case 'priority-optional':
         return <PriorityView priority="optional" />;
+      case 'recurring-20':
+        return <PriorityView priority="20" recurring />;
+      case 'recurring-70':
+        return <PriorityView priority="70" recurring />;
+      case 'recurring-10':
+        return <PriorityView priority="10" recurring />;
       case 'categories':
         return <CategoriesView />;
       case 'metrics':
