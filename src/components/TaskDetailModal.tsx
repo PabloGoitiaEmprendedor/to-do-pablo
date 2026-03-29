@@ -149,7 +149,6 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
 
   const handleClose = useCallback(() => {
     if (focusMode) return;
-    handleSave();
     onClose();
   }, [focusMode, onClose]);
 
@@ -298,7 +297,6 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
       recurrence_kind: recurrenceKind,
       category_id: taskCategoryId,
     });
-    setEditing(false);
   };
 
   const isCompleted = currentTask?.status === 'completed';
@@ -461,7 +459,7 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                 </AnimatePresence>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={handleClose} className="p-1 rounded hover:bg-accent transition-colors">
+                <button onClick={() => { handleSave(); handleClose(); }} className="p-1 rounded hover:bg-accent transition-colors">
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
