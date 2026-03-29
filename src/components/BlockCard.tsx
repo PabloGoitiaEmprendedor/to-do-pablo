@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Check, ChevronDown, ChevronUp, RotateCcw, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Plus, Check, ChevronDown, ChevronUp, RotateCcw, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { DbTask, DbTimeBlock } from '@/hooks/useSupabaseTasks';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -229,23 +229,16 @@ function SortableTaskPill({
           </span>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-            <span className="text-[10px] sm:text-xs font-mono">{task.duration_minutes}m</span>
-          </div>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRescheduleClick(task);
-            }}
-            className="p-1 rounded-lg hover:bg-muted-foreground/10 transition-colors"
-            title="Reagendar"
-          >
-            <CalendarIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-muted-foreground" />
-          </button>
-        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRescheduleClick(task);
+          }}
+          className="p-1 rounded-lg hover:bg-muted-foreground/10 transition-colors shrink-0"
+          title="Reagendar"
+        >
+          <CalendarIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-muted-foreground" />
+        </button>
 
         {isSubtaskTarget && (
           <span className="text-[10px] text-primary font-medium shrink-0">↳</span>
