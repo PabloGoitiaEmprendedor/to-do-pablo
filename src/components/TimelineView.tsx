@@ -6,8 +6,7 @@ import { BlockCard } from './BlockCard';
 import { QuickTaskModal } from './QuickTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 import { QuickRescheduleModal } from './QuickRescheduleModal';
-import { FillGapsModal } from './FillGapsModal';
-import { Pencil, Check, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { getHabitKeyForTask } from '@/lib/habitTaskMapping';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppStore } from '@/store/appStore';
@@ -34,7 +33,6 @@ export function TimelineView({ date, label }: TimelineViewProps) {
   const { tasks, loading: tasksLoading, completeTask, failTask, updateTask, deleteTask, getEffectiveStatus, resetTask } = useDbTasks(date);
   const { blocks, loading: blocksLoading, updateBlock } = useTimeBlocks();
   const [showQuickCreate, setShowQuickCreate] = useState(false);
-  const [showFillGaps, setShowFillGaps] = useState(false);
   const [quickCreateTime, setQuickCreateTime] = useState({ start: '', duration: 0 });
   const [quickCreateBlockId, setQuickCreateBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<DbTimeBlock | null>(null);
@@ -48,15 +46,16 @@ export function TimelineView({ date, label }: TimelineViewProps) {
   const [hoverTargetId, setHoverTargetId] = useState<string | null>(null);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [subtaskIndicator, setSubtaskIndicator] = useState<string | null>(null);
-  const [isFillingGaps, setIsFillingGaps] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleOpenFillGaps = () => {
-    setShowFillGaps(true);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveTaskId(event.active.id as string);
+    setIsDragging(true);
   };
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
@@ -235,18 +234,15 @@ export function TimelineView({ date, label }: TimelineViewProps) {
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 15 } }),
     useSensor(TouchSensor, { 
       activationConstraint: { 
-        delay: 300, 
-        tolerance: 10 
+        delay: 800, 
+        tolerance: 25,
+        distance: 30
       } 
     })
   );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveTaskId(event.active.id as string);
-  };
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
@@ -281,6 +277,7 @@ export function TimelineView({ date, label }: TimelineViewProps) {
     setActiveTaskId(null);
     setHoverTargetId(null);
     setSubtaskIndicator(null);
+    setIsDragging(false);
 
     const { active, over } = event;
     if (!over) return;
@@ -377,18 +374,6 @@ export function TimelineView({ date, label }: TimelineViewProps) {
         onDragEnd={handleDragEnd}
       >
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 sm:space-y-4">
-          {isToday && blocks.length > 0 && (
-            <div className="flex justify-start mb-2">
-              <button
-                onClick={handleOpenFillGaps}
-                disabled={isFillingGaps}
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" />
-                Llenar Huecos
-              </button>
-            </div>
-          )}
           {blocks.map((block, idx) => {
             const blockTasks = tasksByBlock.map.get(block.id) || [];
             const isCurrent = idx === currentBlockIndex;
@@ -397,10 +382,18 @@ export function TimelineView({ date, label }: TimelineViewProps) {
             return (
               <div key={block.id} className="relative">
                 {isCurrent && (
-                  <div 
-                    className="absolute -left-1 top-4 bottom-4 w-[3px] rounded-full z-10"
-                    style={{ backgroundColor: blockColor }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div 
+                        className="absolute -left-2 top-0 bottom-0 w-[4px] rounded-full"
+                        style={{ backgroundColor: blockColor }}
+                      />
+                      <div 
+                        className="absolute -left-[18px] top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-background z-20"
+                        style={{ backgroundColor: blockColor }}
+                      />
+                    </div>
+                  </div>
                 )}
                 <BlockCard
                   block={block}
@@ -506,12 +499,6 @@ export function TimelineView({ date, label }: TimelineViewProps) {
         onMoveToBacklog={(taskId) => {
           updateTask(taskId, { priority: 'optional', block_id: null });
         }}
-      />
-
-      <FillGapsModal
-        open={showFillGaps}
-        onClose={() => setShowFillGaps(false)}
-        date={date}
       />
     </div>
   );

@@ -48,18 +48,46 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-xl p-4 sm:p-6"
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-background/60 backdrop-blur-xl p-0 sm:p-4"
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 40 }}
-            className="bg-card backdrop-blur-3xl border border-border rounded-[2.5rem] w-full max-w-2xl shadow-[0_64px_128px_-32px_rgba(0,0,0,0.15)] dark:shadow-[0_64px_128px_-32px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row h-[70vh] relative"
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="bg-card backdrop-blur-3xl border border-border rounded-t-3xl sm:rounded-[2.5rem] w-full max-w-2xl shadow-[0_64px_128px_-32px_rgba(0,0,0,0.15)] dark:shadow-[0_64px_128px_-32px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row max-h-[90vh] sm:max-h-[80vh] relative"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Mobile Header */}
+            <div className="sm:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-card sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-primary" />
+                <span className="font-bold">Ajustes</span>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-full hover:bg-accent">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Tabs */}
+            <div className="sm:hidden flex gap-2 px-4 pb-3 bg-card">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === tab.id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {/* Sidebar Navigation */}
-            <div className="w-full md:w-64 bg-secondary/50 dark:bg-black/20 border-r border-border p-6 flex flex-col gap-2">
+            <div className="hidden md:flex w-64 bg-secondary/50 dark:bg-black/20 border-r border-border p-6 flex-col gap-2">
               <div className="flex items-center gap-3 mb-8 px-2">
                 <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
                   <Settings className="w-6 h-6 text-primary" />
@@ -110,7 +138,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-background dark:bg-black/5">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar bg-background dark:bg-black/5">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
@@ -250,7 +278,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               </AnimatePresence>
             </div>
             
-            <button onClick={onClose} className="absolute top-8 right-8 p-3 rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 dark:bg-black/40 dark:border-white/10 dark:hover:bg-black/60 dark:text-white transition-all active:scale-90 z-50 shadow-sm">
+            <button onClick={onClose} className="hidden sm:block absolute top-6 right-6 p-3 rounded-2xl bg-secondary border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80 dark:bg-black/40 dark:border-white/10 dark:hover:bg-black/60 dark:text-white transition-all active:scale-90 z-50 shadow-sm">
               <X className="w-5 h-5 text-current" />
             </button>
           </motion.div>

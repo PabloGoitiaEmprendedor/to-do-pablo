@@ -13,7 +13,7 @@ import { CategoriesView } from '@/components/CategoriesView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
-import { Search, Sun, CalendarDays, Target, Zap, Plus, Settings, Menu, X, Grid3X3 } from 'lucide-react';
+import { Search, Sun, CalendarDays, Target, Zap, Plus, Settings, Menu, X } from 'lucide-react';
 import { useDbTasks } from '@/hooks/useSupabaseTasks';
 import { useThemeStore } from '@/store/themeStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -182,17 +182,6 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setActivePage('today');
-              }}
-              className="p-2.5 rounded-2xl hover:bg-white/20 transition-all text-muted-foreground hover:text-foreground"
-              title="Llenar Huecos"
-            >
-              <Grid3X3 className="w-5 h-5" />
-            </motion.button>
             <motion.button 
               whileHover={{ rotate: 180 }}
               transition={{ type: 'spring', stiffness: 200, damping: 10 }}

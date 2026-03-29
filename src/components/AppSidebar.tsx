@@ -46,12 +46,9 @@ const DEFAULT_COLORS: Record<string, string> = {
 };
 
 export function AppSidebar() {
-  const { activePage, setActivePage, sidebarOpen, setSidebarOpen, xp, level } = useAppStore();
+  const { activePage, setActivePage, sidebarOpen, setSidebarOpen } = useAppStore();
   const { blocks } = useTimeBlocks();
   const [showCreate, setShowCreate] = useState(false);
-  const XP_PER_LEVEL = 1000;
-  const xpInLevel = xp % XP_PER_LEVEL;
-  const xpProgress = (xpInLevel / XP_PER_LEVEL) * 100;
 
   const getBlockName = (priority?: string) => {
     if (!priority) return null;
@@ -132,19 +129,7 @@ export function AppSidebar() {
               })}
             </nav>
 
-            <div className="p-3 border-t border-sidebar-border space-y-3">
-              <div className="px-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-bold text-sidebar-foreground/80">⚡ Nivel {level}</span>
-                  <span className="text-[10px] text-sidebar-foreground/50">{xpInLevel} / {XP_PER_LEVEL} XP</span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-sidebar-accent overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-700"
-                    style={{ width: `${xpProgress}%` }}
-                  />
-                </div>
-              </div>
+            <div className="p-3 border-t border-sidebar-border">
               <button
                 onClick={() => setShowCreate(true)}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-90 transition-opacity"
