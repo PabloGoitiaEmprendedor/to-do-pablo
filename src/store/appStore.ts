@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { format, addDays } from 'date-fns';
 
-export type SidebarPage = 'today' | 'planning' | 'routines' | 'priority-20' | 'priority-70' | 'priority-10' | 'priority-optional' | 'metrics' | 'habits' | 'eisenhower';
+export type SidebarPage = 'today' | 'planning' | 'routines' | 'priority-20' | 'priority-70' | 'priority-10' | 'priority-optional' | 'categories' | 'metrics' | 'habits' | 'eisenhower';
 
 interface AppStore {
   currentDate: string;

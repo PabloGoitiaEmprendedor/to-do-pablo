@@ -12,6 +12,7 @@ import {
   Plus,
   ChevronLeft,
   Target,
+  FolderOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 import { CreateTaskModal } from './CreateTaskModal';
@@ -25,6 +26,7 @@ const NAV_ITEMS: { id: SidebarPage; label: string; icon: React.ElementType; sect
   { id: 'priority-70', label: '70% Expansión', icon: TrendingUp },
   { id: 'priority-10', label: '10% Soporte', icon: Zap },
   { id: 'priority-optional', label: 'Opcional', icon: CircleDot },
+  { id: 'categories', label: 'Categorías', icon: FolderOpen, section: 'Organización' },
   { id: 'metrics', label: 'Métricas', icon: BarChart3, section: 'Análisis' },
   { id: 'habits', label: 'Hábitos', icon: Zap },
   { id: 'eisenhower', label: 'Matriz Eisenhower', icon: Target },

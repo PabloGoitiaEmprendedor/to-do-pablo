@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, Square, Check, XCircle, RotateCcw, Clock, Calendar, Link2, Plus, Trash2, FileText, ChevronDown, GripVertical, Timer } from 'lucide-react';
-import { DbTask } from '@/hooks/useSupabaseTasks';
+import { X, Play, Pause, Square, Check, XCircle, RotateCcw, Clock, Calendar, Link2, Plus, Trash2, FileText, ChevronDown, GripVertical, Timer, Folder } from 'lucide-react';
+import { DbTask, useCategories } from '@/hooks/useSupabaseTasks';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays, addWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -68,6 +68,7 @@ function getElapsedSeconds(state: TimerState): number {
 }
 
 export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onFail, onDelete, onTaskSelect, allTasks = [], onAutoAdvance }: TaskDetailModalProps) {
+  const { categories } = useCategories();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -76,9 +77,11 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
   const [link, setLink] = useState('');
   const [description, setDescription] = useState('');
   const [taskDate, setTaskDate] = useState('');
+  const [taskCategoryId, setTaskCategoryId] = useState<string | null>(null);
   const [recurrenceKind, setRecurrenceKind] = useState('none');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   // Subtasks
   const [newSubtaskName, setNewSubtaskName] = useState('');
@@ -128,13 +131,15 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
       setPriority(task.priority as Priority);
       setLink(task.link || '');
       setDescription(task.description || '');
-      setTaskDate(task.date);
+      setTaskDate(task.date || '');
+      setTaskCategoryId(task.category_id);
       setRecurrenceKind(task.recurrence_kind);
       setEditing(false);
       setShowAddSubtask(false);
       setNewSubtaskName('');
       setShowDatePicker(false);
       setShowPriorityPicker(false);
+      setShowCategoryPicker(false);
 
       const saved = loadTimerState();
       if (saved && saved.taskId === task.id) {
@@ -290,8 +295,9 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
       priority,
       link: link.trim() || null,
       description: description.trim() || null,
-      date: taskDate,
+      date: taskDate || null,
       recurrence_kind: recurrenceKind,
+      category_id: taskCategoryId,
     });
     setEditing(false);
   };
@@ -404,15 +410,15 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/60 backdrop-blur-md p-4 pb-safe"
           onClick={handleClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.95, y: 100 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl max-h-[85vh] overflow-y-auto"
+            className="bg-card border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with quick priority & date */}
@@ -467,10 +473,10 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
               </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {editing ? (
                 <input value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-transparent text-foreground text-lg font-semibold outline-none border-b border-border pb-2" />
+                  className="w-full bg-transparent text-foreground text-lg font-semibold outline-none border-b border-border pb-3" />
               ) : (
                 <h2 className={`text-lg font-semibold ${isCompleted ? 'line-through opacity-50' : ''}`}>{currentTask.name}</h2>
               )}
@@ -558,7 +564,7 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                     <label className="text-[11px] text-muted-foreground uppercase tracking-wider block mb-1">Descripción</label>
                     <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción..."
                       rows={3}
-                      className="w-full bg-secondary text-foreground text-sm rounded-lg px-3 py-2 outline-none resize-none" />
+                      className="w-full bg-secondary text-foreground text-sm rounded-xl px-4 py-3 outline-none resize-none" />
                   </div>
                 ) : currentTask.description ? (
                   <div className="flex items-start gap-3 text-sm">
@@ -566,6 +572,59 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                     <p className="text-foreground/80 text-sm whitespace-pre-wrap">{currentTask.description}</p>
                   </div>
                 ) : null}
+
+                {/* Category */}
+                <div className="flex items-center gap-3 text-sm relative">
+                  <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+                  {!editing && (
+                    <button
+                      onClick={() => setShowCategoryPicker(!showCategoryPicker)}
+                      className="flex items-center gap-2 hover:bg-accent px-2 py-1 rounded-lg transition-colors"
+                    >
+                      {taskCategoryId ? (
+                        <>
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full shrink-0" 
+                            style={{ backgroundColor: categories.find(c => c.id === taskCategoryId)?.color || '#888' }}
+                          />
+                          <span className="text-foreground/80">
+                            {categories.find(c => c.id === taskCategoryId)?.name || 'Sin categoría'}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Sin categoría</span>
+                      )}
+                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    </button>
+                  )}
+                  <AnimatePresence>
+                    {showCategoryPicker && !editing && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="absolute top-full left-6 mt-1 bg-card border border-border rounded-xl shadow-xl z-10 p-2 min-w-[160px]"
+                      >
+                        <button
+                          onClick={() => { onUpdate(currentTask.id, { category_id: null }); setTaskCategoryId(null); setShowCategoryPicker(false); }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent ${!taskCategoryId ? 'bg-accent' : ''}`}
+                        >
+                          <span className="text-muted-foreground">Sin categoría</span>
+                        </button>
+                        {categories.map(cat => (
+                          <button
+                            key={cat.id}
+                            onClick={() => { onUpdate(currentTask.id, { category_id: cat.id }); setTaskCategoryId(cat.id); setShowCategoryPicker(false); }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent ${taskCategoryId === cat.id ? 'bg-accent' : ''}`}
+                          >
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                            {cat.name}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
                 {/* Link */}
                 {(link || currentTask.link || editing) && (
@@ -715,41 +774,43 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
             </div>
 
             {/* Actions footer */}
-            <div className="p-4 border-t border-border flex gap-2">
-              {editing ? (
-                <>
-                  <button onClick={() => setEditing(false)} className="flex-1 py-2.5 bg-secondary text-foreground text-sm font-medium rounded-lg hover:bg-accent transition-colors">
-                    Cancelar
+            <div className="p-4 sm:p-5 border-t border-border shrink-0">
+              <div className="flex gap-2">
+                {editing ? (
+                  <>
+                    <button onClick={() => setEditing(false)} className="flex-1 py-3 bg-secondary text-foreground text-sm font-medium rounded-xl hover:bg-accent transition-colors">
+                      Cancelar
+                    </button>
+                    <button onClick={handleSave} className="flex-1 py-3 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-90 transition-opacity">
+                      Guardar
+                    </button>
+                  </>
+                ) : !isCompleted && !isFailed ? (
+                  <>
+                    <button onClick={() => { onComplete(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-500/20 text-green-600 text-sm font-semibold rounded-xl hover:bg-green-500/30 transition-colors">
+                      <Check className="w-4 h-4" /> Completar
+                    </button>
+                    <button onClick={() => { onFail(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500/20 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-500/30 transition-colors">
+                      <XCircle className="w-4 h-4" /> Fallar
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={handleClose} className="flex-1 py-3 bg-secondary text-foreground text-sm font-medium rounded-xl hover:bg-accent transition-colors">
+                    Cerrar
                   </button>
-                  <button onClick={handleSave} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
-                    Guardar
+                )}
+                {onDelete && currentTask && (
+                  <button
+                    onClick={() => { onDelete(currentTask.id); onClose(); }}
+                    className="p-3 bg-destructive/10 text-destructive rounded-xl hover:bg-destructive/20 transition-colors"
+                    title="Eliminar tarea"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                </>
-              ) : !isCompleted && !isFailed ? (
-                <>
-                  <button onClick={() => { onComplete(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-500/20 text-green-600 text-sm font-medium rounded-lg hover:bg-green-500/30 transition-colors">
-                    <Check className="w-4 h-4" /> Completar
-                  </button>
-                  <button onClick={() => { onFail(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-500/20 text-red-600 text-sm font-medium rounded-lg hover:bg-red-500/30 transition-colors">
-                    <XCircle className="w-4 h-4" /> Fallar
-                  </button>
-                </>
-              ) : (
-                <button onClick={handleClose} className="flex-1 py-2.5 bg-secondary text-foreground text-sm font-medium rounded-lg hover:bg-accent transition-colors">
-                  Cerrar
-                </button>
-              )}
-              {onDelete && currentTask && (
-                <button
-                  onClick={() => { onDelete(currentTask.id); onClose(); }}
-                  className="p-2.5 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-                  title="Eliminar tarea"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
+                )}
+              </div>
             </div>
           </motion.div>
         </motion.div>

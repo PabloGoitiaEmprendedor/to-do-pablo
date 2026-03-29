@@ -9,14 +9,14 @@ import { RoutinesView } from '@/components/RoutinesView';
 import { PriorityView } from '@/components/PriorityView';
 import { MetricsView } from '@/components/MetricsView';
 import { HabitsView } from '@/components/HabitsView';
+import { CategoriesView } from '@/components/CategoriesView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
-import { Search, Sun, CalendarDays, Target, Zap, Plus, Settings, Menu, X } from 'lucide-react';
+import { Search, Sun, CalendarDays, Target, Zap, Plus, Settings, Menu, X, Grid3X3 } from 'lucide-react';
 import { useDbTasks } from '@/hooks/useSupabaseTasks';
 import { useThemeStore } from '@/store/themeStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { VoiceTaskButton } from '@/components/VoiceTaskButton';
 
 const Index = () => {
   const { activePage, toggleSidebar, setActivePage } = useAppStore();
@@ -54,6 +54,8 @@ const Index = () => {
         return <PriorityView priority="10" />;
       case 'priority-optional':
         return <PriorityView priority="optional" />;
+      case 'categories':
+        return <CategoriesView />;
       case 'metrics':
         return <MetricsView />;
       case 'habits':
@@ -180,7 +182,17 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <VoiceTaskButton defaultDate={getTodayDate()} />
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setActivePage('today');
+              }}
+              className="p-2.5 rounded-2xl hover:bg-white/20 transition-all text-muted-foreground hover:text-foreground"
+              title="Llenar Huecos"
+            >
+              <Grid3X3 className="w-5 h-5" />
+            </motion.button>
             <motion.button 
               whileHover={{ rotate: 180 }}
               transition={{ type: 'spring', stiffness: 200, damping: 10 }}
@@ -238,10 +250,10 @@ const Index = () => {
 
       <main 
         ref={mainRef} 
-        className="flex-1 overflow-y-auto pt-32 px-4 pb-20 scroll-smooth"
+        className="flex-1 overflow-y-auto pt-32 px-4 sm:px-6 pb-20 scroll-smooth"
         onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 20)}
       >
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-1">
           {renderContent()}
         </div>
       </main>

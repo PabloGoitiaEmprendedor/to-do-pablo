@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Check, ChevronDown, ChevronUp, RotateCcw, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Check, ChevronDown, ChevronUp, RotateCcw, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { DbTask, DbTimeBlock } from '@/hooks/useSupabaseTasks';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -24,8 +24,6 @@ export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete
   const totalCount = tasks.length;
   const allCompleted = totalCount > 0 && completedCount === totalCount;
 
-
-  // Time remaining/exceeded calculation
   const [bh, bm] = block.start_time.split(':').map(Number);
   const [eh, em] = block.end_time.split(':').map(Number);
   const blockMinutes = (eh * 60 + em) - (bh * 60 + bm);
@@ -35,31 +33,42 @@ export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete
   const { setNodeRef, isOver } = useDroppable({ id: block.id });
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2 sm:space-y-1.5">
       <div
-        className="flex items-center justify-between px-1 cursor-pointer"
+        className="flex items-center justify-between px-2 py-1 cursor-pointer"
         onClick={() => setCollapsed(!collapsed)}
       >
-        <h3 className="text-sm font-semibold text-foreground">{block.name}</h3>
-        <div className="flex items-center gap-1.5">
-          {/* Time indicator */}
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-2.5 h-2.5 rounded-full shrink-0" 
+            style={{ backgroundColor: blockColor }}
+          />
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{block.name}</h3>
+          <span className="text-[10px] sm:text-xs text-muted-foreground font-mono hidden sm:inline">
+            {block.start_time.slice(0, 5)} - {block.end_time.slice(0, 5)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {totalCount > 0 && (
-            <span className={`text-[10px] font-mono ${
-              remainingMinutes > 0 ? 'text-primary' : remainingMinutes < 0 ? 'text-destructive' : 'text-muted-foreground'
+            <span className={`text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded-full ${
+              remainingMinutes > 0 ? 'bg-green-500/10 text-green-600' : remainingMinutes < 0 ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground'
             }`}>
               {remainingMinutes > 0 ? `+${remainingMinutes}m` : remainingMinutes < 0 ? `${remainingMinutes}m` : '✓'}
             </span>
           )}
+          <span className="text-[10px] sm:text-xs text-muted-foreground">
+            {completedCount}/{totalCount}
+          </span>
           <button
             onClick={(e) => { e.stopPropagation(); onAddTask(block.id, block.start_time, block.end_time); }}
-            className="p-1 rounded-md hover:bg-accent/60 transition-colors"
+            className="p-1.5 sm:p-1 rounded-lg hover:bg-accent/60 transition-colors"
           >
-            <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+            <Plus className="w-4 h-4 text-muted-foreground" />
           </button>
           {collapsed ? (
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
           )}
         </div>
       </div>
@@ -72,7 +81,7 @@ export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="overflow-hidden rounded-3xl p-3 transition-all duration-300"
+            className="overflow-hidden rounded-2xl sm:rounded-3xl p-3 sm:p-4 transition-all duration-300"
             style={{
               backgroundColor: isOver ? `${blockColor}30` : `${blockColor}15`,
               backdropFilter: 'blur(8px)',
@@ -81,12 +90,12 @@ export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete
             }}
           >
             {tasks.length === 0 ? (
-              <div className="text-center py-6">
-                <span className="text-xs text-muted-foreground/60">Sin tareas</span>
+              <div className="text-center py-4 sm:py-6">
+                <span className="text-xs sm:text-sm text-muted-foreground/60">Sin tareas</span>
               </div>
             ) : (
               <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-1">
+                <div className="space-y-2 sm:space-y-1">
                   {tasks.map((task) => {
                     const subtasks = allTasks.filter(t => t.parent_task_id === task.id);
                     return (
@@ -136,12 +145,16 @@ function SortableTaskPill({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ 
+    id: task.id,
+    data: { type: 'task', task }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
   };
 
   const isCompleted = task.status === 'completed';
@@ -149,7 +162,6 @@ function SortableTaskPill({
   const [showCheck, setShowCheck] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const hasSubtasks = subtasks.length > 0;
-  const completedSubs = subtasks.filter(s => s.status === 'completed').length;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
@@ -157,10 +169,15 @@ function SortableTaskPill({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className={`flex items-center gap-3 px-4 py-3 rounded-2xl cursor-grab active:cursor-grabbing transition-all hover:bg-white/5 border border-transparent hover:border-white/10 ${
+        className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl cursor-grab active:cursor-grabbing transition-all hover:bg-white/5 border border-transparent hover:border-white/10 ${
           isCompleted || isFailed ? 'opacity-40 grayscale-[0.5]' : ''
         } ${isSubtaskTarget ? 'ring-2 ring-primary bg-primary/10 scale-[1.02] border-primary/30 shadow-lg shadow-primary/10' : ''}`}
         onClick={() => onSelect(task)}
+        onTouchEnd={(e) => {
+          if (!isDragging) {
+            onSelect(task);
+          }
+        }}
         role="button"
         tabIndex={0}
       >
@@ -169,7 +186,7 @@ function SortableTaskPill({
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             className="p-0.5 shrink-0"
           >
-            <ChevronRight className={`w-3 h-3 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`} />
+            <ChevronRight className={`w-3.5 sm:w-4 h-3.5 sm:h-4 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`} />
           </button>
         )}
 
@@ -180,7 +197,7 @@ function SortableTaskPill({
             setShowCheck(!isCompleted);
             onComplete(task.id);
           }}
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+          className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all touch-manipulation ${
             isCompleted
               ? 'border-green-500 bg-green-500'
               : isFailed
@@ -195,36 +212,42 @@ function SortableTaskPill({
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
               >
-                <Check className="w-3 h-3 text-white" />
+                <Check className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" />
               </motion.div>
             )}
           </AnimatePresence>
         </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRescheduleClick(task);
-          }}
-          className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-opacity opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/10`}
-          title="Reagendar"
-        >
-          <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-        </button>
-
         <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-nowrap overflow-hidden">
           {task.recurrence_kind !== 'none' && (
-            <RotateCcw className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
+            <RotateCcw className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-muted-foreground/50 shrink-0" />
           )}
-          <span className={`text-[13px] font-medium leading-tight truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+          <span className={`text-[13px] sm:text-sm font-medium leading-tight truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
             {task.name}
           </span>
         </div>
 
-        {isSubtaskTarget && (
-          <span className="text-[10px] text-primary font-medium shrink-0">↳ subtarea</span>
-        )}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+            <span className="text-[10px] sm:text-xs font-mono">{task.duration_minutes}m</span>
+          </div>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRescheduleClick(task);
+            }}
+            className="p-1 rounded-lg hover:bg-muted-foreground/10 transition-colors"
+            title="Reagendar"
+          >
+            <CalendarIcon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-muted-foreground" />
+          </button>
+        </div>
 
+        {isSubtaskTarget && (
+          <span className="text-[10px] text-primary font-medium shrink-0">↳</span>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -233,13 +256,13 @@ function SortableTaskPill({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden ml-6 space-y-0.5"
+            className="overflow-hidden ml-4 sm:ml-6 space-y-0.5"
           >
             {subtasks.map((sub) => (
               <div
                 key={sub.id}
                 onClick={() => onSelect(sub)}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-accent/30 transition-colors ${
+                className={`flex items-center gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg cursor-pointer hover:bg-accent/30 transition-colors ${
                   sub.status === 'completed' || sub.status === 'failed' ? 'opacity-40' : ''
                 }`}
               >
@@ -249,13 +272,13 @@ function SortableTaskPill({
                     if (sub.status === 'failed') return;
                     onComplete(sub.id);
                   }}
-                  className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                  className={`w-4 sm:w-5 h-4 sm:h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                     sub.status === 'completed' ? 'border-green-500 bg-green-500' : 'border-muted-foreground/30'
                   }`}
                 >
-                  {sub.status === 'completed' && <Check className="w-2 h-2 text-white" />}
+                  {sub.status === 'completed' && <Check className="w-2.5 sm:w-3 h-2.5 sm:h-3 text-white" />}
                 </button>
-                <span className={`text-[12px] truncate ${sub.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                <span className={`text-[12px] sm:text-sm truncate ${sub.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                   {sub.name}
                 </span>
               </div>
