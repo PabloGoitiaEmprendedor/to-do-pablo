@@ -237,9 +237,9 @@ export function TimelineView({ date, label }: TimelineViewProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 15 } }),
     useSensor(TouchSensor, { 
       activationConstraint: { 
-        delay: 800, 
-        tolerance: 25,
-        distance: 30
+        delay: 3000, 
+        tolerance: 5,
+        distance: 0
       } 
     })
   );

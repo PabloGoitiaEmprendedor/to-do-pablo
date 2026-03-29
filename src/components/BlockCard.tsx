@@ -159,14 +159,12 @@ function SortableTaskPill({
   const isFailed = task.status === 'failed';
   const [showCheck, setShowCheck] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [touched, setTouched] = useState(false);
   const hasSubtasks = subtasks.length > 0;
 
   const handleClick = () => {
-    if (!isDragging && !touched) {
+    if (!isDragging) {
       onSelect(task);
     }
-    setTouched(false);
   };
 
   return (
@@ -175,11 +173,12 @@ function SortableTaskPill({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2 }}
-        className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl cursor-grab active:cursor-grabbing transition-all hover:bg-white/5 border border-transparent hover:border-white/10 ${
+        className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all hover:bg-white/5 border border-transparent hover:border-white/10 ${
+          isDragging ? 'cursor-grabbing' : 'cursor-pointer'
+        } ${
           isCompleted || isFailed ? 'opacity-40 grayscale-[0.5]' : ''
         } ${isSubtaskTarget ? 'ring-2 ring-primary bg-primary/10 scale-[1.02] border-primary/30 shadow-lg shadow-primary/10' : ''}`}
         onClick={handleClick}
-        onTouchStart={() => setTouched(true)}
         role="button"
         tabIndex={0}
       >
