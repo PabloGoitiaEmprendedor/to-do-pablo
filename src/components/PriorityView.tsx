@@ -1,5 +1,5 @@
 import { useAllTasks, useTimeBlocks } from '@/hooks/useSupabaseTasks';
-import { Check, X, ExternalLink } from 'lucide-react';
+import { Check, X, ExternalLink, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 
@@ -26,6 +26,8 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
   const displayTasks = recurring 
     ? filtered.filter(t => t.recurrence_kind !== 'none')
     : filtered.filter(t => t.recurrence_kind === 'none');
+  
+  const noDateTasks = filtered.filter(t => t.recurrence_kind === 'none' && !t.date);
 
   const handleComplete = async (id: string) => {
     await supabase.from('tasks').update({ status: 'completed' }).eq('id', id);
@@ -39,6 +41,8 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
 
   const pending = displayTasks.filter(t => t.status === 'pending');
   const completed = displayTasks.filter(t => t.status === 'completed');
+  const pendingNoDate = noDateTasks.filter(t => t.status === 'pending');
+  const completedNoDate = noDateTasks.filter(t => t.status === 'completed');
 
   const renderTask = (task: typeof displayTasks[0]) => (
     <div 
@@ -105,7 +109,7 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
               )}
             </h1>
             <span className="text-xs text-muted-foreground">
-              {pending.length} pendientes · {completed.length} completadas
+              {pending.length + pendingNoDate.length} pendientes · {completed.length + completedNoDate.length} completadas
             </span>
           </div>
         </div>
@@ -151,6 +155,21 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
             </div>
             <div className="space-y-2">
               {completed.map(task => renderTask(task))}
+            </div>
+          </div>
+        )}
+
+        {!loading && noDateTasks.length > 0 && !recurring && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1 pt-4 border-t border-border/50">
+              <Calendar className="w-3.5 h-3.5 text-amber-500" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-500">
+                Sin fecha
+              </h2>
+              <div className="h-px bg-border flex-1" />
+            </div>
+            <div className="space-y-2">
+              {noDateTasks.map(task => renderTask(task))}
             </div>
           </div>
         )}
