@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, Calendar, Moon, Sun, Settings, Clock, Palette, ShieldCheck } from 'lucide-react';
+import { X, Plus, Trash2, Calendar, Moon, Sun, Settings, Clock, Palette, ShieldCheck, Plug, Check } from 'lucide-react';
 import { useThemeStore } from '@/store/themeStore';
 import { useTimeBlocks, DbTimeBlock } from '@/hooks/useSupabaseTasks';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
@@ -16,7 +16,17 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { blocks, updateBlock, addBlock, deleteBlock } = useTimeBlocks();
   const today = format(new Date(), 'yyyy-MM-dd');
   const { connected: calendarConnected, startAuth } = useGoogleCalendar(today);
-  const [activeTab, setActiveTab] = useState<'general' | 'blocks'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'blocks' | 'integraciones'>('general');
+  const [notionToken, setNotionToken] = useState(() => localStorage.getItem('notion_token') || '');
+  const [notionDbId, setNotionDbId] = useState(() => localStorage.getItem('notion_db_id') || '');
+  const [notionSaved, setNotionSaved] = useState(false);
+
+  const saveNotionConfig = () => {
+    localStorage.setItem('notion_token', notionToken);
+    localStorage.setItem('notion_db_id', notionDbId);
+    setNotionSaved(true);
+    setTimeout(() => setNotionSaved(false), 2000);
+  };
 
   const colorPresets = [
     '#B4461E', '#D35400', '#E74C3C', '#C0392B',
@@ -28,6 +38,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const TABS = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'blocks', label: 'Bloques', icon: Clock },
+    { id: 'integraciones', label: 'Integraciones', icon: Plug },
   ];
 
   return (
@@ -108,7 +119,51 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {activeTab === 'general' ? (
+                  {activeTab === 'integraciones' ? (
+                    <div className="space-y-8">
+                      <div className="flex items-center gap-2 mb-6 text-primary/60">
+                        <Plug className="w-4 h-4" />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Notion Sync</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Cuando completes una tarea, la app actualizará automáticamente el estado en tu base de datos de Notion. Tus credenciales <strong>solo se guardan en tu navegador</strong>, nunca en la nube.
+                      </p>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Notion Integration Token</label>
+                          <input
+                            type="password"
+                            value={notionToken}
+                            onChange={(e) => setNotionToken(e.target.value)}
+                            placeholder="secret_xxxxxxxxxx..."
+                            className="w-full bg-background border border-border text-foreground text-sm font-mono rounded-2xl px-4 py-3 outline-none focus:border-primary/40 transition-all"
+                          />
+                          <p className="text-[10px] text-muted-foreground">Crea una integración en notion.so/my-integrations</p>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Database ID de Tareas</label>
+                          <input
+                            type="text"
+                            value={notionDbId}
+                            onChange={(e) => setNotionDbId(e.target.value)}
+                            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                            className="w-full bg-background border border-border text-foreground text-sm font-mono rounded-2xl px-4 py-3 outline-none focus:border-primary/40 transition-all"
+                          />
+                          <p className="text-[10px] text-muted-foreground">El ID está en la URL de tu base de datos de Notion</p>
+                        </div>
+                        <button
+                          onClick={saveNotionConfig}
+                          className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${notionSaved ? 'bg-green-500/20 text-green-600' : 'bg-primary text-primary-foreground hover:opacity-90'}`}
+                        >
+                          {notionSaved ? <><Check className="w-4 h-4" /> Guardado</> : 'Guardar Credenciales'}
+                        </button>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold">⚡ Cómo funciona</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Al completar una tarea, el sistema buscará la tarea por nombre en tu Notion y cambiará su propiedad de estado a "Completado". Asegúrate de que tu integración tenga acceso a esa base de datos.</p>
+                      </div>
+                    </div>
+                  ) : activeTab === 'general' ? (
                     <div className="space-y-12">
                       <section>
                         <div className="flex items-center gap-2 mb-8 text-primary/60">

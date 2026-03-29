@@ -16,6 +16,7 @@ import { Search, Sun, CalendarDays, Target, Zap, Plus, Settings, Menu, X } from 
 import { useDbTasks } from '@/hooks/useSupabaseTasks';
 import { useThemeStore } from '@/store/themeStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { VoiceTaskButton } from '@/components/VoiceTaskButton';
 
 const Index = () => {
   const { activePage, toggleSidebar, setActivePage } = useAppStore();
@@ -179,6 +180,7 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <VoiceTaskButton defaultDate={getTodayDate()} />
             <motion.button 
               whileHover={{ rotate: 180 }}
               transition={{ type: 'spring', stiffness: 200, damping: 10 }}

@@ -5,11 +5,11 @@ import { useDbTasks, useTimeBlocks, DbTask, DbTimeBlock } from '@/hooks/useSupab
 import { BlockCard } from './BlockCard';
 import { QuickTaskModal } from './QuickTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
-import { TimeBlockEditor } from './TimeBlockEditor';
 import { QuickRescheduleModal } from './QuickRescheduleModal';
-import { Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Pencil, Check, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
 import { getHabitKeyForTask } from '@/lib/habitTaskMapping';
 import { supabase } from '@/integrations/supabase/client';
+import { useAppStore } from '@/store/appStore';
 import {
   DndContext,
   DragOverlay,
@@ -41,15 +41,58 @@ export function TimelineView({ date, label }: TimelineViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<DbTask | null>(null);
+  const addXp = useAppStore((s) => s.addXp);
   
   const [hoverTargetId, setHoverTargetId] = useState<string | null>(null);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [subtaskIndicator, setSubtaskIndicator] = useState<string | null>(null);
+  const [isFillingGaps, setIsFillingGaps] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  const autoFillGaps = async () => {
+    setIsFillingGaps(true);
+    try {
+      const blockGaps = blocks.map(block => {
+        const [bh, bm] = block.start_time.split(':').map(Number);
+        const [eh, em] = block.end_time.split(':').map(Number);
+        const dur = (eh * 60 + em) - (bh * 60 + bm);
+        const assigned = (tasksByBlock.map.get(block.id) || []).reduce((acc, t) => acc + (t.duration_minutes || 0), 0);
+        return { block, free: dur - assigned };
+      }).filter(b => b.free >= 5);
+
+      if (blockGaps.length === 0) return;
+
+      const backlogTasks = tasks.filter(t => t.priority === 'optional' && t.status === 'pending' && (!t.block_id || t.date !== date))
+        .sort((a, b) => b.duration_minutes - a.duration_minutes);
+
+      let availableBacklog = [...backlogTasks];
+      const updates = [];
+
+      for (const gap of blockGaps) {
+        let remaining = gap.free;
+        for (let i = 0; i < availableBacklog.length; i++) {
+          const bt = availableBacklog[i];
+          if (bt.duration_minutes > 0 && bt.duration_minutes <= remaining) {
+            updates.push({ id: bt.id, block_id: gap.block.id, date });
+            remaining -= bt.duration_minutes;
+            availableBacklog.splice(i, 1);
+            i--; 
+            if (remaining < 5) break; 
+          }
+        }
+      }
+
+      if (updates.length > 0) {
+        await Promise.all(updates.map(u => updateTask(u.id, { block_id: u.block_id, date: u.date })));
+      }
+    } finally {
+      setIsFillingGaps(false);
+    }
+  };
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const isToday = date === todayStr;
@@ -191,6 +234,30 @@ export function TimelineView({ date, label }: TimelineViewProps) {
       await updateTask(id, { status: 'pending' });
       await removeHabitForTask(task);
       return;
+    }
+    // Award XP based on priority
+    const xpMap: Record<string, number> = { '20': 50, '70': 20, '10': 5, 'optional': 3 };
+    addXp(xpMap[task.priority] || 10);
+    // Notion sync
+    const notionToken = localStorage.getItem('notion_token');
+    const notionDbId = localStorage.getItem('notion_db_id');
+    if (notionToken && notionDbId) {
+      try {
+        const searchRes = await fetch('https://api.notion.com/v1/databases/' + notionDbId + '/query', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filter: { property: 'Nombre', title: { equals: task.name } } }),
+        });
+        const searchData = await searchRes.json();
+        const pageId = searchData?.results?.[0]?.id;
+        if (pageId) {
+          await fetch('https://api.notion.com/v1/pages/' + pageId, {
+            method: 'PATCH',
+            headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ properties: { Estado: { status: { name: 'Completado' } } } }),
+          });
+        }
+      } catch (_) { /* silent fail */ }
     }
     // Complete
     setCompletedTaskId(id);
@@ -339,6 +406,18 @@ export function TimelineView({ date, label }: TimelineViewProps) {
         onDragEnd={handleDragEnd}
       >
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+          {isToday && blocks.length > 0 && (
+            <div className="flex justify-start mb-2">
+              <button
+                onClick={autoFillGaps}
+                disabled={isFillingGaps}
+                className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                {isFillingGaps ? 'Buscando...' : 'Llenar Huecos con Backlog'}
+              </button>
+            </div>
+          )}
           {blocks.map((block, idx) => {
             const blockTasks = tasksByBlock.map.get(block.id) || [];
             const isCurrent = idx === currentBlockIndex;
