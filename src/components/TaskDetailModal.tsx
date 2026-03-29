@@ -69,7 +69,6 @@ function getElapsedSeconds(state: TimerState): number {
 
 export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onFail, onDelete, onTaskSelect, allTasks = [], onAutoAdvance }: TaskDetailModalProps) {
   const { categories } = useCategories();
-  const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
   const [duration, setDuration] = useState('');
@@ -134,7 +133,6 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
       setTaskDate(task.date || '');
       setTaskCategoryId(task.category_id);
       setRecurrenceKind(task.recurrence_kind);
-      setEditing(false);
       setShowAddSubtask(false);
       setNewSubtaskName('');
       setShowDatePicker(false);
@@ -151,6 +149,7 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
 
   const handleClose = useCallback(() => {
     if (focusMode) return;
+    handleSave();
     onClose();
   }, [focusMode, onClose]);
 
@@ -462,11 +461,6 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                 </AnimatePresence>
               </div>
               <div className="flex items-center gap-1">
-                {!editing && !isCompleted && !isFailed && (
-                  <button onClick={() => setEditing(true)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors">
-                    Editar
-                  </button>
-                )}
                 <button onClick={handleClose} className="p-1 rounded hover:bg-accent transition-colors">
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -474,12 +468,8 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-              {editing ? (
-                <input value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-transparent text-foreground text-lg font-semibold outline-none border-b border-border pb-3" />
-              ) : (
-                <h2 className={`text-lg font-semibold ${isCompleted ? 'line-through opacity-50' : ''}`}>{currentTask.name}</h2>
-              )}
+              <input value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full bg-transparent text-foreground text-lg font-semibold outline-none border-b border-border pb-3" />
 
               {(isCompleted || isFailed) && (
                 <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${isCompleted ? 'bg-green-500/20 text-green-600' : 'bg-red-500/20 text-red-600'}`}>
@@ -489,79 +479,35 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
               )}
 
               <div className="space-y-3">
-                {/* Quick date change */}
-                <div className="flex items-center gap-3 text-sm relative">
-                  <Calendar className={`w-4 h-4 shrink-0 ${currentTask.date ? 'text-muted-foreground' : 'text-amber-500'}`} />
-                  {editing ? (
-                    <input type="date" value={taskDate} onChange={(e) => setTaskDate(e.target.value)}
-                      className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono" />
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      {currentTask.date ? (
-                        <button
-                          onClick={() => setShowDatePicker(!showDatePicker)}
-                          className="text-foreground/80 font-mono hover:bg-accent px-2 py-0.5 rounded transition-colors"
-                        >
-                          {currentTask.date}
-                        </button>
-                      ) : (
-                        <span className="text-amber-500/80 text-xs font-medium px-2 py-0.5 bg-amber-500/10 rounded-lg">
-                          Sin fecha
-                        </span>
-                      )}
-                      <AnimatePresence>
-                        {showDatePicker && !isCompleted && !isFailed && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-10 p-2 flex flex-col gap-1"
-                          >
-                            <button
-                              onClick={() => quickChangeDate('')}
-                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors text-left ${!currentTask.date ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-accent'}`}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                              Sin fecha
-                            </button>
-                            {QUICK_DATES.map(qd => (
-                              <button
-                                key={qd.label}
-                                onClick={() => quickChangeDate(qd.getValue())}
-                                className="px-3 py-1.5 text-sm rounded-lg hover:bg-accent transition-colors text-left"
-                              >
-                                {qd.label}
-                              </button>
-                            ))}
-                            <input
-                              type="date"
-                              className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1.5 outline-none font-mono mt-1"
-                              onChange={(e) => { if (e.target.value) quickChangeDate(e.target.value); }}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                {/* Date */}
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className={`w-4 h-4 shrink-0 ${!taskDate ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                  <input 
+                    type="date" 
+                    value={taskDate} 
+                    onChange={(e) => { 
+                      setTaskDate(e.target.value); 
+                      quickChangeDate(e.target.value); 
+                    }}
+                    className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono flex-1" 
+                  />
+                  {!taskDate && (
+                    <span className="text-amber-500/80 text-[10px] font-medium px-1.5 py-0.5 bg-amber-500/10 rounded">
+                      Sin fecha
+                    </span>
                   )}
                 </div>
 
                 {/* Time & Duration */}
                 <div className="flex items-center gap-3 text-sm">
                   <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  {editing ? (
-                    <div className="flex gap-2 flex-1">
-                      <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
-                        className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono" />
-                      <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} min="5" step="5" placeholder="min"
-                        className="w-20 bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono" />
-                      <span className="text-muted-foreground self-center text-xs">min</span>
-                    </div>
-                  ) : (
-                    <span className="text-foreground/80">
-                      {currentTask.start_time !== '00:00:00' && currentTask.start_time !== '00:00' ? formatTime12(currentTask.start_time) + ' · ' : ''}
-                      {currentTask.duration_minutes} min
-                    </span>
-                  )}
+                  <div className="flex gap-2 flex-1">
+                    <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+                      className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono w-28" />
+                    <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} min="5" step="5" placeholder="min"
+                      className="w-16 bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono" />
+                    <span className="text-muted-foreground self-center text-xs">min</span>
+                  </div>
                 </div>
 
                 {currentTask.recurrence_kind !== 'none' && (
@@ -572,46 +518,37 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                 )}
 
                 {/* Description */}
-                {editing ? (
-                  <div>
-                    <label className="text-[11px] text-muted-foreground uppercase tracking-wider block mb-1">Descripción</label>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción..."
-                      rows={3}
-                      className="w-full bg-secondary text-foreground text-sm rounded-xl px-4 py-3 outline-none resize-none" />
-                  </div>
-                ) : currentTask.description ? (
-                  <div className="flex items-start gap-3 text-sm">
-                    <FileText className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-foreground/80 text-sm whitespace-pre-wrap">{currentTask.description}</p>
-                  </div>
-                ) : null}
+                <div>
+                  <label className="text-[11px] text-muted-foreground uppercase tracking-wider block mb-1">Descripción</label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción..."
+                    rows={3}
+                    className="w-full bg-secondary text-foreground text-sm rounded-xl px-4 py-3 outline-none resize-none" />
+                </div>
 
                 {/* Category */}
                 <div className="flex items-center gap-3 text-sm relative">
                   <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
-                  {!editing && (
-                    <button
-                      onClick={() => setShowCategoryPicker(!showCategoryPicker)}
-                      className="flex items-center gap-2 hover:bg-accent px-2 py-1 rounded-lg transition-colors"
-                    >
-                      {taskCategoryId ? (
-                        <>
-                          <div 
-                            className="w-2.5 h-2.5 rounded-full shrink-0" 
-                            style={{ backgroundColor: categories.find(c => c.id === taskCategoryId)?.color || '#888' }}
-                          />
-                          <span className="text-foreground/80">
-                            {categories.find(c => c.id === taskCategoryId)?.name || 'Sin categoría'}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">Sin categoría</span>
-                      )}
-                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setShowCategoryPicker(!showCategoryPicker)}
+                    className="flex items-center gap-2 hover:bg-accent px-2 py-1 rounded-lg transition-colors flex-1"
+                  >
+                    {taskCategoryId ? (
+                      <>
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full shrink-0" 
+                          style={{ backgroundColor: categories.find(c => c.id === taskCategoryId)?.color || '#888' }}
+                        />
+                        <span className="text-foreground/80">
+                          {categories.find(c => c.id === taskCategoryId)?.name || 'Sin categoría'}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Sin categoría</span>
+                    )}
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                  </button>
                   <AnimatePresence>
-                    {showCategoryPicker && !editing && (
+                    {showCategoryPicker && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -619,7 +556,11 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                         className="absolute top-full left-6 mt-1 bg-card border border-border rounded-xl shadow-xl z-10 p-2 min-w-[160px]"
                       >
                         <button
-                          onClick={() => { onUpdate(currentTask.id, { category_id: null }); setTaskCategoryId(null); setShowCategoryPicker(false); }}
+                          onClick={() => { 
+                            setTaskCategoryId(null); 
+                            setShowCategoryPicker(false);
+                            onUpdate(currentTask.id, { category_id: null }); 
+                          }}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent ${!taskCategoryId ? 'bg-accent' : ''}`}
                         >
                           <span className="text-muted-foreground">Sin categoría</span>
@@ -627,7 +568,11 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                         {categories.map(cat => (
                           <button
                             key={cat.id}
-                            onClick={() => { onUpdate(currentTask.id, { category_id: cat.id }); setTaskCategoryId(cat.id); setShowCategoryPicker(false); }}
+                            onClick={() => { 
+                              setTaskCategoryId(cat.id); 
+                              setShowCategoryPicker(false);
+                              onUpdate(currentTask.id, { category_id: cat.id }); 
+                            }}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent ${taskCategoryId === cat.id ? 'bg-accent' : ''}`}
                           >
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
@@ -640,37 +585,29 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                 </div>
 
                 {/* Link */}
-                {(link || currentTask.link || editing) && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
-                    {editing ? (
-                      <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..."
-                        className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none" />
-                    ) : currentTask.link ? (
-                      <a href={currentTask.link} target="_blank" rel="noopener" className="text-primary/70 hover:text-primary underline truncate">{currentTask.link}</a>
-                    ) : null}
-                  </div>
-                )}
+                <div className="flex items-center gap-3 text-sm">
+                  <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..."
+                    className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none" />
+                </div>
 
-                {editing && (
-                  <div>
-                    <label className="text-[11px] text-muted-foreground uppercase tracking-wider block mb-2">Prioridad</label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {(['20', '70', '10', 'optional'] as Priority[]).map((p) => (
-                        <button key={p} type="button" onClick={() => setPriority(p)}
-                          className={`text-[11px] font-medium py-1.5 px-2 rounded-lg transition-all ${priority === p ? 'ring-2 ring-foreground/30 text-foreground' : 'text-foreground/60'}`}
-                          style={{
-                            backgroundColor: priority === p
-                              ? `hsl(var(--priority-${p === 'optional' ? 'optional' : p}) / 0.4)`
-                              : `hsl(var(--priority-${p === 'optional' ? 'optional' : p}) / 0.15)`,
-                          }}
-                        >
-                          {p === '20' ? '20%' : p === '70' ? '70%' : p === '10' ? '10%' : 'Opc'}
-                        </button>
-                      ))}
+                <div>
+                  <label className="text-[11px] text-muted-foreground uppercase tracking-wider block mb-2">Prioridad</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(['20', '70', '10', 'optional'] as Priority[]).map((p) => (
+                      <button key={p} type="button" onClick={() => setPriority(p)}
+                        className={`text-[11px] font-medium py-1.5 px-2 rounded-lg transition-all ${priority === p ? 'ring-2 ring-foreground/30 text-foreground' : 'text-foreground/60'}`}
+                        style={{
+                          backgroundColor: priority === p
+                            ? `hsl(var(--priority-${p === 'optional' ? 'optional' : p}) / 0.4)`
+                            : `hsl(var(--priority-${p === 'optional' ? 'optional' : p}) / 0.15)`,
+                        }}
+                      >
+                        {p === '20' ? '20%' : p === '70' ? '70%' : p === '10' ? '10%' : 'Opc'}
+                      </button>
+                    ))}
                     </div>
                   </div>
-                )}
               </div>
 
               {/* Mood panel for mood task */}
@@ -776,7 +713,7 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
               </div>
 
               {/* Start Focus button */}
-              {!isCompleted && !isFailed && !editing && !isMoodTask && (
+              {!isCompleted && !isFailed && !isMoodTask && (
                 <button
                   onClick={startFocus}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
@@ -789,22 +726,13 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
             {/* Actions footer */}
             <div className="p-4 sm:p-5 border-t border-border shrink-0">
               <div className="flex gap-2">
-                {editing ? (
+                {!isCompleted && !isFailed ? (
                   <>
-                    <button onClick={() => setEditing(false)} className="flex-1 py-3 bg-secondary text-foreground text-sm font-medium rounded-xl hover:bg-accent transition-colors">
-                      Cancelar
-                    </button>
-                    <button onClick={handleSave} className="flex-1 py-3 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:opacity-90 transition-opacity">
-                      Guardar
-                    </button>
-                  </>
-                ) : !isCompleted && !isFailed ? (
-                  <>
-                    <button onClick={() => { onComplete(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
+                    <button onClick={() => { handleSave(); onComplete(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-500/20 text-green-600 text-sm font-semibold rounded-xl hover:bg-green-500/30 transition-colors">
                       <Check className="w-4 h-4" /> Completar
                     </button>
-                    <button onClick={() => { onFail(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
+                    <button onClick={() => { handleSave(); onFail(currentTask.id); onAutoAdvance?.(currentTask.id); onClose(); }}
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500/20 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-500/30 transition-colors">
                       <XCircle className="w-4 h-4" /> Fallar
                     </button>
