@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Pause, Square, Check, XCircle, RotateCcw, Clock, Calendar, Link2, Plus, Trash2, FileText, ChevronDown, GripVertical, Timer, Folder } from 'lucide-react';
+import { X, Play, Pause, Square, Check, XCircle, RotateCcw, Clock, Calendar, Link2, Plus, Trash2, FileText, ChevronDown, GripVertical, Timer, Folder, AlertCircle } from 'lucide-react';
 import { DbTask, useCategories } from '@/hooks/useSupabaseTasks';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays, addWeeks } from 'date-fns';
@@ -491,18 +491,24 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
               <div className="space-y-3">
                 {/* Quick date change */}
                 <div className="flex items-center gap-3 text-sm relative">
-                  <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Calendar className={`w-4 h-4 shrink-0 ${currentTask.date ? 'text-muted-foreground' : 'text-amber-500'}`} />
                   {editing ? (
                     <input type="date" value={taskDate} onChange={(e) => setTaskDate(e.target.value)}
                       className="bg-secondary text-foreground text-sm rounded-lg px-2 py-1 outline-none font-mono" />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowDatePicker(!showDatePicker)}
-                        className="text-foreground/80 font-mono hover:bg-accent px-2 py-0.5 rounded transition-colors"
-                      >
-                        {currentTask.date}
-                      </button>
+                      {currentTask.date ? (
+                        <button
+                          onClick={() => setShowDatePicker(!showDatePicker)}
+                          className="text-foreground/80 font-mono hover:bg-accent px-2 py-0.5 rounded transition-colors"
+                        >
+                          {currentTask.date}
+                        </button>
+                      ) : (
+                        <span className="text-amber-500/80 text-xs font-medium px-2 py-0.5 bg-amber-500/10 rounded-lg">
+                          Sin fecha
+                        </span>
+                      )}
                       <AnimatePresence>
                         {showDatePicker && !isCompleted && !isFailed && (
                           <motion.div
@@ -511,6 +517,13 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="absolute top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-10 p-2 flex flex-col gap-1"
                           >
+                            <button
+                              onClick={() => quickChangeDate('')}
+                              className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors text-left ${!currentTask.date ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-accent'}`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Sin fecha
+                            </button>
                             {QUICK_DATES.map(qd => (
                               <button
                                 key={qd.label}
