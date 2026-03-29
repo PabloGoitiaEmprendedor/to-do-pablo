@@ -238,8 +238,8 @@ export function TaskDetailModal({ task, open, onClose, onUpdate, onComplete, onF
   // Quick date change
   const quickChangeDate = async (newDate: string) => {
     if (!task) return;
-    onUpdate(task.id, { date: newDate });
-    setTaskDate(newDate);
+    onUpdate(task.id, { date: newDate || null });
+    setTaskDate(newDate || '');
     setShowDatePicker(false);
   };
 
