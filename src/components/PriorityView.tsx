@@ -1,9 +1,7 @@
 import { useAllTasks, useTimeBlocks } from '@/hooks/useSupabaseTasks';
-import { Check, X, Clock, ExternalLink, RotateCcw, Calendar } from 'lucide-react';
+import { Check, X, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useThemeStore } from '@/store/themeStore';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
 
 interface PriorityViewProps {
   priority: '20' | '70' | '10' | 'optional';
@@ -42,7 +40,7 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
   const pending = displayTasks.filter(t => t.status === 'pending');
   const completed = displayTasks.filter(t => t.status === 'completed');
 
-  const renderTask = (task: typeof displayTasks[0], showDate = true) => (
+  const renderTask = (task: typeof displayTasks[0]) => (
     <div 
       key={task.id} 
       className={`group flex items-center gap-3 px-4 py-3 rounded-2xl border border-border/50 bg-card/50 hover:bg-card hover:border-primary/20 transition-all ${
@@ -66,24 +64,6 @@ export function PriorityView({ priority, recurring = false }: PriorityViewProps)
         <p className={`text-sm font-medium truncate ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
           {task.name}
         </p>
-        <div className="flex items-center gap-2 mt-1 opacity-60">
-          {showDate && task.date && (
-            <span className="text-[10px] font-mono flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {format(new Date(task.date), 'dd MMM')}
-            </span>
-          )}
-          {task.recurrence_kind !== 'none' && (
-            <span className="text-[10px] font-mono flex items-center gap-1 text-primary">
-              <RotateCcw className="w-3 h-3" />
-              Recurrente
-            </span>
-          )}
-          <span className="text-[10px] font-mono flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {task.duration_minutes}m
-          </span>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
