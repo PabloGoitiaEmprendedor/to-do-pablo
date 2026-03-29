@@ -56,9 +56,7 @@ export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete
               {remainingMinutes > 0 ? `+${remainingMinutes}m` : remainingMinutes < 0 ? `${remainingMinutes}m` : '✓'}
             </span>
           )}
-          <span className="text-[10px] sm:text-xs text-muted-foreground">
-            {completedCount}/{totalCount}
-          </span>
+
           <button
             onClick={(e) => { e.stopPropagation(); onAddTask(block.id, block.start_time, block.end_time); }}
             className="p-1.5 sm:p-1 rounded-lg hover:bg-accent/60 transition-colors"
