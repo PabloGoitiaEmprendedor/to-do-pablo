@@ -33,18 +33,55 @@ export function QuickTaskModal({ open, onClose, date, startTime, durationMinutes
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    
+    // Validaciones
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      alert('El nombre de la tarea es requerido');
+      return;
+    }
+
+    if (!start) {
+      alert('La hora de inicio es requerida');
+      return;
+    }
+
+    if (!date) {
+      alert('La fecha es requerida');
+      return;
+    }
+
+    // Validar recurrencia
+    if (recurrenceKind === 'weekly' && weeklyDays.length === 0) {
+      alert('Selecciona al menos un día de la semana');
+      return;
+    }
+
+    if (recurrenceKind === 'monthly') {
+      const monthlyDaysArray = monthlyDays.split(',').map(Number).filter(Boolean);
+      if (monthlyDaysArray.length === 0) {
+        alert('Selecciona al menos un día del mes');
+        return;
+      }
+    }
 
     const recurrenceConfig: Record<string, any> = {};
     if (recurrenceKind === 'weekly') recurrenceConfig.days = weeklyDays;
     if (recurrenceKind === 'monthly') recurrenceConfig.days = monthlyDays.split(',').map(Number).filter(Boolean);
-    if (recurrenceKind === 'custom') { recurrenceConfig.every = parseInt(customEvery) || 1; recurrenceConfig.unit = customUnit; }
+    if (recurrenceKind === 'custom') { 
+      recurrenceConfig.every = parseInt(customEvery) || 1;
+      if (recurrenceConfig.every < 1) {
+        alert('El intervalo debe ser mayor que 0');
+        return;
+      }
+      recurrenceConfig.unit = customUnit;
+    }
 
-    await supabase.from('tasks').insert({
-      name: name.trim(),
+    const { error } = await supabase.from('tasks').insert({
+      name: trimmedName,
       date,
       start_time: start,
-      duration_minutes: parseInt(duration) || 30,
+      duration_minutes: Math.max(5, parseInt(duration) || 30),
       priority,
       status: 'pending',
       link: link.trim() || null,
@@ -52,6 +89,12 @@ export function QuickTaskModal({ open, onClose, date, startTime, durationMinutes
       recurrence_config: recurrenceConfig,
       block_id: blockId || null,
     });
+
+    if (error) {
+      console.error('Error creating task:', error);
+      alert('Error al crear la tarea. Intenta de nuevo.');
+      return;
+    }
 
     setName('');
     setLink('');

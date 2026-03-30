@@ -8,6 +8,7 @@ import { TaskDetailModal } from './TaskDetailModal';
 import { QuickRescheduleModal } from './QuickRescheduleModal';
 import { Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { getHabitKeyForTask } from '@/lib/habitTaskMapping';
+import { filterTasksByDate } from '@/lib/recurrenceUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppStore } from '@/store/appStore';
 import {
@@ -63,55 +64,7 @@ export function TimelineView({ date, label }: TimelineViewProps) {
   const isFutureDate = date > todayStr;
 
   const filteredTasks = useMemo(() => {
-    const dateObj = new Date(date + 'T00:00:00');
-    const dayOfWeek = dateObj.getDay();
-    const dayOfMonth = dateObj.getDate();
-
-    return tasks.filter(t => {
-      if (t.parent_task_id) return false;
-      
-      if (t.recurrence_kind === 'none') {
-        if (t.priority === 'optional' && !t.block_id) return false;
-        if (!t.date) return false;
-        return t.date === date;
-      }
-      
-      if (t.recurrence_kind === 'daily') return true;
-      if (t.recurrence_kind === 'weekly') {
-        const config = t.recurrence_config as any;
-        if (config?.days && Array.isArray(config.days) && config.days.length > 0) {
-          return config.days.includes(dayOfWeek);
-        }
-        return false;
-      }
-      if (t.recurrence_kind === 'monthly') {
-        const config = t.recurrence_config as any;
-        if (config?.days && Array.isArray(config.days)) {
-          return config.days.includes(dayOfMonth);
-        }
-        return false;
-      }
-      if (t.recurrence_kind === 'custom') {
-        const config = t.recurrence_config as any;
-        if (!config?.every || !config?.unit) return false;
-        const origDate = new Date(t.date + 'T00:00:00');
-        const diffMs = dateObj.getTime() - origDate.getTime();
-        if (diffMs < 0) return false;
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-        let intervalDays = config.every;
-        if (config.unit === 'weeks') intervalDays *= 7;
-        if (config.unit === 'months') intervalDays *= 30;
-        if (config.unit === 'years') intervalDays *= 365;
-        return diffDays % intervalDays === 0;
-      }
-      return false;
-    }).map(t => {
-      const effectiveStatus = getEffectiveStatus(t.id, t.status);
-      if (t.recurrence_kind !== 'none' && !isToday) {
-        return { ...t, status: 'pending' as const };
-      }
-      return { ...t, status: effectiveStatus as any };
-    });
+    return filterTasksByDate(tasks, date, isToday, getEffectiveStatus);
   }, [tasks, date, isToday, getEffectiveStatus]);
 
   const tasksByBlock = useMemo(() => {
@@ -195,21 +148,17 @@ const handleTaskComplete = async (id: string) => {
   if (!task) return;
 
   if (task.status === 'completed') {
-    // Uncomplete
-    // Optimistic update for uncomplete
-    setTasks(prev => 
-      prev.map(t => 
-        t.id === id ? { ...t, status: 'pending' as const } : t
-      )
-    );
-    await updateTask(id, { status: 'pending' });
+    // Uncomplete: Remove habit log and update status
     await removeHabitForTask(task);
+    await updateTask(id, { status: 'pending' });
     return;
   }
+
   // Award XP based on priority
   const xpMap: Record<string, number> = { '20': 50, '70': 20, '10': 5, 'optional': 3 };
   addXp(xpMap[task.priority] || 10);
-  // Notion sync
+
+  // Notion sync (non-blocking)
   const notionToken = localStorage.getItem('notion_token');
   const notionDbId = localStorage.getItem('notion_db_id');
   if (notionToken && notionDbId) {
@@ -230,30 +179,29 @@ const handleTaskComplete = async (id: string) => {
       }
     } catch (_) { /* silent fail */ }
   }
-  // Complete with optimistic update
-  setTasks(prev => 
-    prev.map(t => 
-      t.id === id ? { ...t, status: 'completed' as const } : t
-    )
-  );
-  setCompletedTaskId(id);
+
+  // Log habit completion
   await logHabitForTask(task);
+
+  // Complete task - UI updates via hook refetch
+  setCompletedTaskId(id);
   setTimeout(async () => {
     await completeTask(id);
     setCompletedTaskId(null);
+    handleAutoAdvance(id);
   }, 600);
 };
 
 const sensors = useSensors(
   useSensor(PointerSensor, { 
     activationConstraint: { 
-      delay: 5000,
-      distance: 15 
+      delay: 200,
+      distance: 5 
     } 
   }),
   useSensor(TouchSensor, { 
     activationConstraint: { 
-      delay: 5000, 
+      delay: 200, 
       tolerance: 5,
       distance: 0
     } 

@@ -179,25 +179,48 @@ export function useDbTasks(date?: string) {
   const [loading, setLoading] = useState(true);
 
   const fetchTasks = useCallback(async () => {
-    let query = supabase.from('tasks').select('*').order('start_time');
-    if (date) {
-      query = query.or(`date.eq.${date},recurrence_kind.neq.none`);
+    const controller = new AbortController();
+    try {
+      let query = supabase.from('tasks').select('*').order('start_time');
+      if (date) {
+        query = query.or(`date.eq.${date},recurrence_kind.neq.none`);
+      }
+      const { data, error } = await query;
+      if (!controller.signal.aborted && !error && data) {
+        setTasks(data as DbTask[]);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        console.error('Error fetching tasks:', err);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-    const { data, error } = await query;
-    if (!error && data) setTasks(data as DbTask[]);
-    setLoading(false);
+    return () => controller.abort();
   }, [date]);
 
   const fetchDailyLogs = useCallback(async () => {
-    if (!date) {
-      setDailyLogs([]);
-      return;
+    const controller = new AbortController();
+    try {
+      if (!date) {
+        setDailyLogs([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('daily_task_logs')
+        .select('*')
+        .eq('date', date);
+      if (!controller.signal.aborted && !error && data) {
+        setDailyLogs(data as DailyTaskLog[]);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        console.error('Error fetching daily logs:', err);
+      }
     }
-    const { data, error } = await supabase
-      .from('daily_task_logs')
-      .select('*')
-      .eq('date', date);
-    if (!error && data) setDailyLogs(data as DailyTaskLog[]);
+    return () => controller.abort();
   }, [date]);
 
   useEffect(() => {
@@ -208,7 +231,10 @@ export function useDbTasks(date?: string) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_task_logs' }, () => fetchDailyLogs())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+      supabase.removeChannel(channel);
+      // Cleanup will be handled by the callbacks
+    };
   }, [fetchTasks, fetchDailyLogs]);
 
   const addTask = async (task: Omit<DbTask, 'id' | 'created_at' | 'notion_source'>) => {
