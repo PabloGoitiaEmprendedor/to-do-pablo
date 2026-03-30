@@ -19,6 +19,7 @@ interface BlockCardProps {
 }
 
 export function BlockCard({ block, tasks, allTasks, onTaskSelect, onTaskComplete, onAddTask, onRescheduleClick, subtaskIndicatorId }: BlockCardProps) {
+  const { categories } = useCategories();
   const [collapsed, setCollapsed] = useState(false);
   const blockColor = block.color || '#888888';
   const completedCount = tasks.filter(t => t.status === 'completed').length;

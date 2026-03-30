@@ -24,7 +24,7 @@ export function CategoryEditor({ category, onClose }: CategoryEditorProps) {
   useEffect(() => {
     if (category) {
       setName(category.name);
-      setColor(category.color);
+      setColor(category.color || '#6366F1');
     } else {
       setName('');
       setColor('#6366F1');
@@ -39,7 +39,7 @@ export function CategoryEditor({ category, onClose }: CategoryEditorProps) {
       if (category) {
         await updateCategory(category.id, { name: name.trim(), color });
       } else {
-        await addCategory({ name: name.trim(), color, sort_order: 0 });
+        await addCategory({ name: name.trim(), color });
       }
       onClose();
     } catch (error) {

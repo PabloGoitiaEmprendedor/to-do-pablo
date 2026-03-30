@@ -97,7 +97,7 @@ export function useCategories() {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .order('sort_order');
+      .order('created_at');
     if (!error && data) setCategories(data as DbCategory[]);
     setLoading(false);
   }, []);
@@ -116,10 +116,10 @@ export function useCategories() {
     fetchCategories();
   };
 
-const updateCategory = async (id: string, updates: Partial<DbCategory>) => {
-  await supabase.from('categories').update(updates).eq('id', id);
-  fetchCategories();
-};
+  const updateCategory = async (id: string, updates: Partial<DbCategory>) => {
+    await supabase.from('categories').update(updates).eq('id', id);
+    fetchCategories();
+  };
 
   const deleteCategory = async (id: string) => {
     await supabase.from('categories').delete().eq('id', id);
