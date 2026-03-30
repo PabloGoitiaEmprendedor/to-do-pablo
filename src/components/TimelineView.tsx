@@ -190,59 +190,75 @@ export function TimelineView({ date, label }: TimelineViewProps) {
     }
   }, [date]);
 
-  const handleTaskComplete = async (id: string) => {
-    const task = filteredTasks.find(t => t.id === id) || tasks.find(t => t.id === id);
-    if (!task) return;
+const handleTaskComplete = async (id: string) => {
+  const task = filteredTasks.find(t => t.id === id) || tasks.find(t => t.id === id);
+  if (!task) return;
 
-    if (task.status === 'completed') {
-      // Uncomplete
-      await updateTask(id, { status: 'pending' });
-      await removeHabitForTask(task);
-      return;
-    }
-    // Award XP based on priority
-    const xpMap: Record<string, number> = { '20': 50, '70': 20, '10': 5, 'optional': 3 };
-    addXp(xpMap[task.priority] || 10);
-    // Notion sync
-    const notionToken = localStorage.getItem('notion_token');
-    const notionDbId = localStorage.getItem('notion_db_id');
-    if (notionToken && notionDbId) {
-      try {
-        const searchRes = await fetch('https://api.notion.com/v1/databases/' + notionDbId + '/query', {
-          method: 'POST',
+  if (task.status === 'completed') {
+    // Uncomplete
+    // Optimistic update for uncomplete
+    setTasks(prev => 
+      prev.map(t => 
+        t.id === id ? { ...t, status: 'pending' as const } : t
+      )
+    );
+    await updateTask(id, { status: 'pending' });
+    await removeHabitForTask(task);
+    return;
+  }
+  // Award XP based on priority
+  const xpMap: Record<string, number> = { '20': 50, '70': 20, '10': 5, 'optional': 3 };
+  addXp(xpMap[task.priority] || 10);
+  // Notion sync
+  const notionToken = localStorage.getItem('notion_token');
+  const notionDbId = localStorage.getItem('notion_db_id');
+  if (notionToken && notionDbId) {
+    try {
+      const searchRes = await fetch('https://api.notion.com/v1/databases/' + notionDbId + '/query', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filter: { property: 'Nombre', title: { equals: task.name } } }),
+      });
+      const searchData = await searchRes.json();
+      const pageId = searchData?.results?.[0]?.id;
+      if (pageId) {
+        await fetch('https://api.notion.com/v1/pages/' + pageId, {
+          method: 'PATCH',
           headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filter: { property: 'Nombre', title: { equals: task.name } } }),
+          body: JSON.stringify({ properties: { Estado: { status: { name: 'Completado' } } } }),
         });
-        const searchData = await searchRes.json();
-        const pageId = searchData?.results?.[0]?.id;
-        if (pageId) {
-          await fetch('https://api.notion.com/v1/pages/' + pageId, {
-            method: 'PATCH',
-            headers: { 'Authorization': 'Bearer ' + notionToken, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ properties: { Estado: { status: { name: 'Completado' } } } }),
-          });
-        }
-      } catch (_) { /* silent fail */ }
-    }
-    // Complete
-    setCompletedTaskId(id);
-    await logHabitForTask(task);
-    setTimeout(async () => {
-      await completeTask(id);
-      setCompletedTaskId(null);
-    }, 600);
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 15 } }),
-    useSensor(TouchSensor, { 
-      activationConstraint: { 
-        delay: 3000, 
-        tolerance: 5,
-        distance: 0
-      } 
-    })
+      }
+    } catch (_) { /* silent fail */ }
+  }
+  // Complete with optimistic update
+  setTasks(prev => 
+    prev.map(t => 
+      t.id === id ? { ...t, status: 'completed' as const } : t
+    )
   );
+  setCompletedTaskId(id);
+  await logHabitForTask(task);
+  setTimeout(async () => {
+    await completeTask(id);
+    setCompletedTaskId(null);
+  }, 600);
+};
+
+const sensors = useSensors(
+  useSensor(PointerSensor, { 
+    activationConstraint: { 
+      delay: 5000,
+      distance: 15 
+    } 
+  }),
+  useSensor(TouchSensor, { 
+    activationConstraint: { 
+      delay: 5000, 
+      tolerance: 5,
+      distance: 0
+    } 
+  })
+);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;

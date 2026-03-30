@@ -37,8 +37,6 @@ export interface DbCategory {
   id: string;
   name: string;
   color: string;
-  icon: string | null;
-  sort_order: number;
   created_at: string;
 }
 
@@ -118,10 +116,10 @@ export function useCategories() {
     fetchCategories();
   };
 
-  const updateCategory = async (id: string, updates: Partial<DbCategory>) => {
-    await supabase.from('categories').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-    fetchCategories();
-  };
+const updateCategory = async (id: string, updates: Partial<DbCategory>) => {
+  await supabase.from('categories').update(updates).eq('id', id);
+  fetchCategories();
+};
 
   const deleteCategory = async (id: string) => {
     await supabase.from('categories').delete().eq('id', id);

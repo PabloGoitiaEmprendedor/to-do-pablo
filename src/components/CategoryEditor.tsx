@@ -35,12 +35,17 @@ export function CategoryEditor({ category, onClose }: CategoryEditorProps) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    if (category) {
-      await updateCategory(category.id, { name: name.trim(), color });
-    } else {
-      await addCategory({ name: name.trim(), color, sort_order: 0 });
+    try {
+      if (category) {
+        await updateCategory(category.id, { name: name.trim(), color });
+      } else {
+        await addCategory({ name: name.trim(), color, sort_order: 0 });
+      }
+      onClose();
+    } catch (error) {
+      console.error('Error saving category:', error);
+      alert('Error al guardar la categoría. Por favor intente de nuevo.');
     }
-    onClose();
   };
 
   const isEditing = !!category;

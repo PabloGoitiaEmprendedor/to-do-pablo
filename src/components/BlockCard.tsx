@@ -5,6 +5,7 @@ import { DbTask, DbTimeBlock } from '@/hooks/useSupabaseTasks';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useCategories } from '@/hooks/useSupabaseTasks';
 
 interface BlockCardProps {
   block: DbTimeBlock;
@@ -226,6 +227,15 @@ function SortableTaskPill({
           <span className={`text-[13px] sm:text-sm font-medium leading-tight truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
             {task.name}
           </span>
+          {task.category_id && (
+            <div 
+              className="w-2 h-2 rounded-full shrink-0 ml-1.5"
+              style={{ 
+                backgroundColor: categories.find(cat => cat.id === task.category_id)?.color || '#888' 
+              }}
+              title={categories.find(cat => cat.id === task.category_id)?.name || 'Categoría desconocida'}
+            />
+          )}
         </div>
 
         <button
