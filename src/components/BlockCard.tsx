@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DbTask, DbTimeBlock } from '@/hooks/useSupabaseTasks';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, Plus, Check } from 'lucide-react';
 
 interface BlockCardProps {
   block: DbTimeBlock;
@@ -51,29 +51,29 @@ export const BlockCard = React.memo(function BlockCard({
   const completionPercent = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
 
   return (
-    <div className="rounded-2xl border border-border overflow-hidden">
+    <div className="rounded-lg sm:rounded-2xl border border-border overflow-hidden">
       <div
-        className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-accent/20 transition-colors"
+        className="px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between cursor-pointer hover:bg-accent/20 transition-colors gap-1.5"
         style={{ backgroundColor: `${blockColor}15` }}
         onClick={() => setCollapsed(!collapsed)}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
           <ChevronDown
-            className="w-4 h-4 transition-transform shrink-0"
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform shrink-0"
             style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
           />
           <div className="flex-1 min-w-0">
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wider block">{block.name}</span>
-            <span className="text-[10px] text-muted-foreground">
-              {block.start_time} - {block.end_time} • {usedMinutes}/{blockMinutes}m
+            <span className="text-[9px] sm:text-[11px] text-muted-foreground uppercase tracking-wider block">{block.name}</span>
+            <span className="text-[8.5px] sm:text-[10px] text-muted-foreground whitespace-nowrap">
+              {block.start_time} - {block.end_time}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {totalCount > 0 && (
-            <div className="flex items-center gap-1">
-              <div className="w-8 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <div className="w-6 sm:w-8 h-1 sm:h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full transition-all"
                   style={{
@@ -82,7 +82,7 @@ export const BlockCard = React.memo(function BlockCard({
                   }}
                 />
               </div>
-              <span className="text-[10px] text-muted-foreground w-6 text-right">
+              <span className="text-[8.5px] sm:text-[10px] text-muted-foreground w-5 sm:w-6 text-right">
                 {completedCount}/{totalCount}
               </span>
             </div>
@@ -97,12 +97,12 @@ export const BlockCard = React.memo(function BlockCard({
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="px-3 py-2 space-y-1.5 bg-card/50 border-t border-border"
+            className="px-2 sm:px-3 py-1.5 sm:py-2 space-y-1 sm:space-y-1.5 bg-card/50 border-t border-border"
           >
             {tasks.length === 0 ? (
               <button
                 onClick={onAddTask}
-                className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-muted-foreground hover:bg-accent/40 transition-colors text-[12px]"
+                className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-1 sm:py-1.5 rounded-lg text-muted-foreground hover:bg-accent/40 transition-colors text-[10px] sm:text-[12px]"
               >
                 <Plus className="w-3 h-3" />
                 Agregar tarea
@@ -136,6 +136,16 @@ export const BlockCard = React.memo(function BlockCard({
   );
 });
 
+interface SortableTaskPillProps {
+  task: DbTask;
+  blockColor: string;
+  onSelect: (task: DbTask) => void;
+  onComplete: (id: string) => void;
+  onRescheduleClick: (task: DbTask) => void;
+  isSubtaskTarget?: boolean;
+  effectiveStatus?: string;
+}
+
 const SortableTaskPill = React.memo(function SortableTaskPill({
   task,
   blockColor,
@@ -143,14 +153,8 @@ const SortableTaskPill = React.memo(function SortableTaskPill({
   onComplete,
   onRescheduleClick,
   isSubtaskTarget,
-}: {
-  task: DbTask;
-  blockColor: string;
-  onSelect: (task: DbTask) => void;
-  onComplete: (id: string) => void;
-  onRescheduleClick: (task: DbTask) => void;
-  isSubtaskTarget?: boolean;
-}) {
+  effectiveStatus,
+}: SortableTaskPillProps) {
   const {
     attributes,
     listeners,
@@ -170,7 +174,8 @@ const SortableTaskPill = React.memo(function SortableTaskPill({
     touchAction: 'none',
   };
 
-  const isCompleted = task.status === 'completed';
+  // Use effectiveStatus from parent if provided (handles daily_task_logs correctly)
+  const isCompleted = effectiveStatus === 'completed' || task.status === 'completed';
 
   const handleClick = () => {
     if (!isDragging) {
@@ -191,20 +196,19 @@ const SortableTaskPill = React.memo(function SortableTaskPill({
             e.stopPropagation();
             onComplete(task.id);
           }}
-          className={`w-4 h-4 rounded-full border-2 shrink-0 transition-all ${
+          className={`w-4.5 h-4.5 rounded-full border-2 shrink-0 transition-all flex items-center justify-center ${
             isCompleted
               ? 'border-primary bg-primary'
-              : 'border-muted-foreground/30 hover:border-muted-foreground/60'
+              : 'border-muted-foreground/40 hover:border-muted-foreground/70'
           }`}
           style={{
             backgroundColor: isCompleted ? blockColor : 'transparent',
             borderColor: isCompleted ? blockColor : undefined,
           }}
+          title={isCompleted ? 'Click para desmarcar' : 'Click para marcar'}
         >
           {isCompleted && (
-            <div className="w-full h-full flex items-center justify-center text-white text-[8px]">
-              ✓
-            </div>
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
           )}
         </button>
 

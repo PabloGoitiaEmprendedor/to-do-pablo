@@ -6,7 +6,7 @@ import { BlockCard } from './BlockCard';
 import { QuickTaskModal } from './QuickTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 import { QuickRescheduleModal } from './QuickRescheduleModal';
-import { Pencil, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Pencil, Check } from 'lucide-react';
 import { getHabitKeyForTask } from '@/lib/habitTaskMapping';
 import { filterTasksByDate } from '@/lib/recurrenceUtils';
 import { supabase } from '@/integrations/supabase/client';
@@ -337,7 +337,7 @@ const sensors = useSensors(
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 sm:space-y-4">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 space-y-5 sm:space-y-4 max-w-4xl mx-auto w-full">
           {blocks.map((block, idx) => {
             const blockTasks = tasksByBlock.map.get(block.id) || [];
             const isCurrent = idx === currentBlockIndex;
@@ -374,31 +374,21 @@ const sensors = useSensors(
           })}
 
           {tasksByBlock.unassigned.length > 0 && (
-            <div className="rounded-2xl border border-border px-3 py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Sin bloque</span>
+            <div className="rounded-lg sm:rounded-2xl border border-border px-2 sm:px-3 py-1.5 sm:py-2">
+              <span className="text-[8.5px] sm:text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Sin bloque</span>
               {tasksByBlock.unassigned.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => setSelectedTask(task)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-accent/40 transition-colors group"
+                  className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg cursor-pointer hover:bg-accent/40 transition-colors group"
                 >
                   <button
                     onClick={(e) => { e.stopPropagation(); handleTaskComplete(task.id); }}
-                    className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 shrink-0"
+                    className="w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full border-2 border-muted-foreground/30 shrink-0"
                   />
-                  <div className="flex-1 min-w-0 pr-2">
-                    <span className="text-[12px] font-medium text-foreground truncate block">{task.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] sm:text-[12px] font-medium text-foreground truncate block">{task.name}</span>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRescheduleTarget(task);
-                    }}
-                    className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-opacity opacity-0 group-hover:opacity-100 hover:bg-muted-foreground/10"
-                    title="Reagendar"
-                  >
-                    <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
-                  </button>
                 </div>
               ))}
             </div>
