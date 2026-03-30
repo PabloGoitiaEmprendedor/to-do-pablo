@@ -195,13 +195,13 @@ const handleTaskComplete = async (id: string) => {
 const sensors = useSensors(
   useSensor(PointerSensor, { 
     activationConstraint: { 
-      delay: 200,
+      delay: 3000,
       distance: 5 
     } 
   }),
   useSensor(TouchSensor, { 
     activationConstraint: { 
-      delay: 200, 
+      delay: 3000, 
       tolerance: 5,
       distance: 0
     } 
